@@ -1,6 +1,7 @@
 import os
 import uuid
-from fastapi import FastAPI, UploadFile, File, Depends
+import shutil
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from celery import group
 from celery.result import GroupResult
 
@@ -19,6 +20,10 @@ async def transcribe(
     file: UploadFile = File(...),
     _: str = Depends(verify_api_key)
 ):
+    """
+    Upload an audio file for transcription with speaker diarization.
+    Returns a job_id and task_id to check the status.
+    """
     job_id = str(uuid.uuid4())
     job_dir = os.path.join(TEMP_DIR, job_id)
     os.makedirs(job_dir)
@@ -28,12 +33,17 @@ async def transcribe(
     with open(audio_path, "wb") as f:
         f.write(await file.read())
 
+    # Split audio into segments (returns list of (path, offset) tuples)
     segments = split_audio(audio_path, os.path.join(job_dir, "segments"))
 
+    # Create task group with offset information for proper timestamp alignment
     task_group = group(
-        transcribe_and_diarize.s(seg, i)
-        for i, seg in enumerate(segments)
+        transcribe_and_diarize.s(seg_path, i, offset)
+        for i, (seg_path, offset) in enumerate(segments)
     )()
+
+    # Save the group result for later retrieval
+    task_group.save()
 
     return {
         "job_id": job_id,
@@ -45,22 +55,36 @@ async def transcribe(
 
 @app.get("/result/{task_id}")
 def get_result(task_id: str, _: str = Depends(verify_api_key)):
+    """
+    Get the result of a transcription job by task_id.
+    """
     result = GroupResult.restore(task_id)
 
     if not result:
         return {"status": "not_found"}
 
     if not result.ready():
-        return {"status": "processing"}
+        # Calculate progress
+        completed = sum(1 for r in result.results if r.ready())
+        total = len(result.results)
+        return {
+            "status": "processing",
+            "progress": f"{completed}/{total}"
+        }
 
-    outputs = result.get()
+    try:
+        outputs = result.get()
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
     outputs.sort(key=lambda x: x["index"])
 
+    # Merge all segments
     merged = []
     for o in outputs:
         merged.extend(o["segments"])
 
-    # Normalize speaker labels (global)
+    # Normalize speaker labels globally
     speaker_map = {}
     counter = 1
 
@@ -73,5 +97,24 @@ def get_result(task_id: str, _: str = Depends(verify_api_key)):
 
     return {
         "status": "done",
+        "total_speakers": len(speaker_map),
         "segments": merged
     }
+
+
+@app.delete("/job/{job_id}")
+def cleanup_job(job_id: str, _: str = Depends(verify_api_key)):
+    """
+    Clean up temporary files for a completed job.
+    """
+    job_dir = os.path.join(TEMP_DIR, job_id)
+    if os.path.exists(job_dir):
+        shutil.rmtree(job_dir)
+        return {"status": "cleaned"}
+    return {"status": "not_found"}
+
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint."""
+    return {"status": "ok"}

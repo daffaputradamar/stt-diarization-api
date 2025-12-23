@@ -1,9 +1,9 @@
 [project]
 name = "stt-diarization-api"
 version = "0.1.0"
-description = "Add your description here"
+description = "Speech-to-Text API with Speaker Diarization"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = [
   "fastapi",
   "uvicorn",
@@ -15,4 +15,6 @@ dependencies = [
   "redis",
   "pyannote.audio",
   "python-dotenv",
+  "soundfile",
+  "numpy",
 ]
