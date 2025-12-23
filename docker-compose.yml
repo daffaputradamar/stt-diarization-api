@@ -9,11 +9,7 @@ services:
       - .env
     depends_on:
       - redis
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
+    gpus: all
 
   worker:
     build: .
@@ -22,11 +18,7 @@ services:
       - .env
     depends_on:
       - redis
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
+    gpus: all
 
   redis:
     image: redis:7

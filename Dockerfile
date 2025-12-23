@@ -7,9 +7,9 @@ RUN apt update && apt install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
-RUN pip install uv
+RUN python3 -m pip install uv
 
-COPY pyproject.toml .python-version ./
+COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen
 
 COPY . .
