@@ -3,8 +3,12 @@ import gc
 import torch
 import whisper
 import numpy as np
+from dotenv import load_dotenv
 from celery import Celery
 from diarization import diarize
+
+# Load environment variables from .env file
+load_dotenv()
 
 celery = Celery(
     "worker",

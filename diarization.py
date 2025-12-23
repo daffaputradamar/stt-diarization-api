@@ -1,13 +1,22 @@
 import os
 import torch
 import soundfile as sf
+from dotenv import load_dotenv
 from pyannote.audio import Pipeline
+from pyannote.audio.core.task import Specifications, Problem, Resolution
+
+# Load environment variables from .env file
+load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
+# Fix for PyTorch 2.6+ weights_only=True default
+# Allowlist pyannote classes for safe loading
+torch.serialization.add_safe_globals([Specifications, Problem, Resolution])
+
 pipeline = Pipeline.from_pretrained(
-    "pyannote/speaker-diarization-3.1",
-    use_auth_token=HF_TOKEN
+    "pyannote/speaker-diarization-community-1",
+    token=HF_TOKEN
 )
 
 # Move to GPU if available

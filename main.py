@@ -1,9 +1,13 @@
 import os
 import uuid
 import shutil
+from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
 from celery import group
 from celery.result import GroupResult
+
+# Load environment variables from .env file
+load_dotenv()
 
 from auth import verify_api_key
 from audio_utils import split_audio
