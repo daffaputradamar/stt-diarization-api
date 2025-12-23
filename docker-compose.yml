@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - API_KEY=coolsecretkey
+      - HF_TOKEN=hf_xxx
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  worker:
+    build: .
+    command: uv run celery -A worker.celery worker --loglevel=info
+    environment:
+      - HF_TOKEN=hf_xxx
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  redis:
+    image: redis:7
