@@ -5,9 +5,8 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      - API_KEY=coolsecretkey
-      - HF_TOKEN=hf_xxx
+    env_file:
+      - .env
     depends_on:
       - redis
     deploy:
@@ -19,8 +18,8 @@ services:
   worker:
     build: .
     command: uv run celery -A worker.celery worker --loglevel=info
-    environment:
-      - HF_TOKEN=hf_xxx
+    env_file:
+      - .env
     depends_on:
       - redis
     deploy:
