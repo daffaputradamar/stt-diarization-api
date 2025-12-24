@@ -1,4 +1,5 @@
 import os
+import sys
 import gc
 import logging
 import torch
@@ -6,6 +7,11 @@ import whisper
 import numpy as np
 from dotenv import load_dotenv
 from celery import Celery
+
+# Add app directory to Python path for forked workers
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
 
 # Load environment variables from .env file
 load_dotenv()
@@ -43,8 +49,8 @@ def get_diarize():
     global _diarize_func
     if _diarize_func is None:
         logger.info("Loading diarization pipeline...")
-        from diarization import diarize
-        _diarize_func = diarize
+        import diarization as diarization_module
+        _diarize_func = diarization_module.diarize
         logger.info("Diarization pipeline loaded successfully")
     return _diarize_func
 
