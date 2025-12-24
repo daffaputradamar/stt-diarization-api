@@ -1,24 +1,41 @@
-version: "3.9"
-
 services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "9050:8000"
     env_file:
       - .env
     depends_on:
       - redis
-    gpus: all
+    volumes:
+      - shared_temp:/app/temp
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   worker:
     build: .
-    command: uv run celery -A worker.celery worker --loglevel=info
+    command: uv run celery -A worker.celery worker --loglevel=info --concurrency=1
     env_file:
       - .env
     depends_on:
       - redis
-    gpus: all
+    volumes:
+      - shared_temp:/app/temp
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
   redis:
     image: redis:7
+
+volumes:
+  shared_temp:
